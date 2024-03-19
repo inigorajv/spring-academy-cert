@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 
+import java.net.URI;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -34,6 +36,21 @@ class CashCardApplicationTests {
 		ResponseEntity<String> response = restTemplate.getForEntity("/v1/cashcards/1000", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(404));
 
+	}
+
+	@Test
+	void shouldCreateNewCashCard(){
+		CashCard cashCard = new CashCard(null, 1000.0);
+		ResponseEntity<Void> response = restTemplate.postForEntity("/v1/cashcards", cashCard, Void.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+		URI locationOfNewCashCard = response.getHeaders().getLocation();
+		ResponseEntity<String> getResponse = restTemplate.getForEntity(locationOfNewCashCard, String.class);
+		assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+		DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
+		Number amount = documentContext.read("$.amount");
+		assertThat(amount).isEqualTo(1000.0);
 	}
 
 }
