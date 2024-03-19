@@ -4,13 +4,12 @@ import com.example.cashcard.entity.CashCard;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
+import org.apache.coyote.Response;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.net.URI;
@@ -135,4 +134,61 @@ class CashCardApplicationTests {
 		ResponseEntity<String> responseEntity = restTemplate.withBasicAuth("stan","stan@123").getForEntity("/v1/cashcards/102", String.class);
 		assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 	}
+
+	@Test
+	@DirtiesContext
+	void shouldUpdateExistingCashCard(){
+		CashCard cashCard = new CashCard(null, 19.99, null);
+		HttpEntity<CashCard> req = new HttpEntity<>(cashCard);
+
+		ResponseEntity<Void> response = restTemplate.withBasicAuth("stan", "stan@123").exchange("/v1/cashcards/99", HttpMethod.PUT, req, Void.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+		ResponseEntity<String> getResp = restTemplate.withBasicAuth("stan","stan@123").getForEntity("/v1/cashcards/99", String.class);
+
+		DocumentContext docContext = JsonPath.parse(getResp.getBody());
+		Number id = docContext.read("$.id");
+		Number amount = docContext.read("$.amount");
+
+		assertThat(amount).isEqualTo(19.99);
+		assertThat(id).isEqualTo(99);
+	}
+
+	@Test
+	void shouldNotUpdateNonExistingCashCard(){
+		ResponseEntity<Void> updResponse = restTemplate.withBasicAuth("stan","stan@123").exchange("/v1/cashcards/1000",HttpMethod.PUT ,new HttpEntity<>(new CashCard(null, 1000.0, null)), Void.class);
+		assertThat(updResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void shouldNotUpdateOthersCashCard(){
+		ResponseEntity<Void> updResponse = restTemplate.withBasicAuth("stan","stan@123").exchange("/v1/cashcards/102",HttpMethod.PUT ,new HttpEntity<>(new CashCard(null, 1000.0, null)), Void.class);
+		assertThat(updResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	@DirtiesContext
+	void shouldDeleteCashCard(){
+		ResponseEntity<Void> delResp = restTemplate.withBasicAuth("stan","stan@123").exchange("/v1/cashcards/99",HttpMethod.DELETE, null, Void.class);
+		assertThat(delResp.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+		ResponseEntity<String> getResp = restTemplate.withBasicAuth("stan","stan@123").getForEntity("/v1/cashcards/99", String.class);
+		assertThat(getResp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void shouldNotDeleteNotExistingCashCard(){
+		ResponseEntity<Void> delResp = restTemplate.withBasicAuth("stan","stan@123").exchange("/v1/cashcards/199", HttpMethod.DELETE, null, Void.class);
+		assertThat(delResp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void shouldNotDeleteCashCardsOwnedByOthers(){
+		ResponseEntity<Void> delResp = restTemplate.withBasicAuth("stan", "stan@123").exchange("/v1/cashcards/102", HttpMethod.DELETE, null, Void.class);
+		assertThat(delResp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+		ResponseEntity<String> getResp = restTemplate.withBasicAuth("lee", "lee@123").getForEntity("/v1/cashcards/102", String.class);
+		assertThat(getResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
+
 }

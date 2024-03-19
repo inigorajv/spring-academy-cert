@@ -47,4 +47,24 @@ public class CashCardController {
         PageRequest pageRequest  = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), pageable.getSortOr(Sort.by(Sort.Direction.ASC, "amount")));
         return ResponseEntity.ok(cashCardRepository.findByOwner(pageRequest, principal.getName()).getContent());
     }
+
+    @PutMapping("/{id}")
+    private ResponseEntity<Void> updateCashCard(@PathVariable Long id, @RequestBody CashCard cashCard, Principal principal){
+        Optional<CashCard> getResp = cashCardRepository.findByIdAndOwner(id, principal.getName());
+        if(!getResp.isPresent()){
+            return ResponseEntity.notFound().build();
+        }
+        CashCard updCashCard = new CashCard(id, cashCard.amount(), principal.getName());
+        cashCardRepository.save(updCashCard);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    private ResponseEntity<Void> deleteCashCard(@PathVariable Long id, Principal principal){
+        if(cashCardRepository.existsByIdAndOwner(id, principal.getName())){
+            cashCardRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 }
