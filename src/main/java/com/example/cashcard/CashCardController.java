@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.security.Principal;
 import java.util.Optional;
 
 @RestController
@@ -24,8 +25,8 @@ public class CashCardController {
     }
 
     @GetMapping("/{id}")
-    private ResponseEntity<CashCard> getCashCardById(@PathVariable Long id){
-        Optional<CashCard> cashCard = cashCardRepository.findById(id);
+    private ResponseEntity<CashCard> getCashCardById(@PathVariable Long id, Principal principal){
+        Optional<CashCard> cashCard = cashCardRepository.findByIdAndOwner(id, principal.getName());
         if(cashCard.isPresent()){
             return ResponseEntity.ok(cashCard.get());
         }else{
@@ -34,16 +35,16 @@ public class CashCardController {
     }
 
     @PostMapping
-    private ResponseEntity<Void> createCashCard(@RequestBody CashCard cashCard, UriComponentsBuilder ucb){
-        CashCard cashCardData = cashCardRepository.save(cashCard);
+    private ResponseEntity<Void> createCashCard(@RequestBody CashCard cashCard, UriComponentsBuilder ucb, Principal principal){
+        CashCard cashCardData = cashCardRepository.save(new CashCard(null, cashCard.amount(), principal.getName()));
         URI locationOfCashCard = ucb.path("v1/cashcards/{id}").buildAndExpand(cashCardData.id()).toUri();
         return ResponseEntity.created(locationOfCashCard).build();
     }
 
 
     @GetMapping
-    private ResponseEntity<Iterable<CashCard>> getAllCashCards(Pageable pageable){
+    private ResponseEntity<Iterable<CashCard>> getAllCashCards(Pageable pageable, Principal principal){
         PageRequest pageRequest  = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), pageable.getSortOr(Sort.by(Sort.Direction.ASC, "amount")));
-        return ResponseEntity.ok(cashCardRepository.findAll(pageRequest).getContent());
+        return ResponseEntity.ok(cashCardRepository.findByOwner(pageRequest, principal.getName()).getContent());
     }
 }
