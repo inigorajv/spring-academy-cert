@@ -33,7 +33,8 @@ public class SecurityConfig {
         User.UserBuilder users = User.builder();
         UserDetails stan = users.username("stan").password(passwordEncoder.encode("stan@123")).roles("CARD-OWNER").build();
         UserDetails hank = users.username("hank").password(passwordEncoder.encode("hank@123")).roles("NON-OWNER").build();
+        UserDetails lee = users.username("lee").password(passwordEncoder.encode("lee@123")).roles("CARD-OWNER").build();
 
-        return new InMemoryUserDetailsManager(stan, hank);
+        return new InMemoryUserDetailsManager(stan, hank, lee);
     }
 }

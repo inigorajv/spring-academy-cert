@@ -13,4 +13,6 @@ public interface CashCardRepository extends CrudRepository<CashCard, Long>, Pagi
     Optional<CashCard> findByIdAndOwner(Long id, String owner);
 
     Page<CashCard> findByOwner(PageRequest pageRequest, String owner);
+
+    boolean existsByIdAndOwner(Long id, String owner);
 }
